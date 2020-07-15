@@ -9,7 +9,8 @@ This discord bot periodically updates a message in our discord server with the c
 - Create a config.json file and put in your bot token
     ```json
     {
-        "token": "YOUR_TOKEN_HERE"
+        "token": "YOUR_TOKEN_HERE",
+        "channel": "CHANNEL_ID_HERE"
     }
     ```
 - Run the main.py file
