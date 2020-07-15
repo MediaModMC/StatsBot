@@ -1,49 +1,61 @@
+from discord.ext import tasks
 import discord
+import aiohttp
 import json
-import requests
-import time
-
-from requests.exceptions import HTTPError
 
 client = discord.Client()
 token = ""
+channel = 0
 
-with open("config.json") as file: 
+with open("config.json") as file:
     data = json.load(file)
-    token = data['token']
+    token = data["token"]
+    channel = int(data["channel"])
 
-async def checkStatus():
+
+@tasks.loop(minutes=1)
+async def check_status():
     print("Checking MediaMod status...")
+    if not hasattr(client, "session") or client.session.closed:
+        client.session = aiohttp.ClientSession(raise_for_status=True)
+    if not hasattr(client, "message"):
+        client.message = None
     try:
-        response = requests.get('https://mediamodapi.cbyrne.dev/stats')
-        response.raise_for_status()
-        json = response.json()
-        
-        embedVar = discord.Embed(title="MediaMod Stats", description="How many people are using MediaMod? (Note: this is only people with snooper enabled)", color=0x00ff00)
-        embedVar.add_field(name="Online Users", value=json["allOnlineUsers"], inline=False)
-        embedVar.add_field(name="All Users", value=json["allUsers"], inline=False)
+        json = await (await client.session.get("https://mediamodapi.cbyrne.dev/stats")).json()
 
+        embed = discord.Embed(
+            title="MediaMod Stats",
+            description="How many people are using MediaMod? (Note: this is only people with snooper enabled)",
+            color=0x00ff00
+        ).add_field(
+            name="Online Users",
+            value=json["allOnlineUsers"],
+            inline=False
+        ).add_field(
+            name="All Users",
+            value=json["allUsers"],
+            inline=False
+        )
+
+        if not client.message:
+            client.message = await client.get_channel(channel).send(embed=embed)
+        else:
+            await client.message.edit(embed=embed)
         print("Done!")
 
-        channel = await client.fetch_channel(732583083953618965)
-        id = channel.last_message_id
-        if id is None:
-            await channel.send(embed = embedVar)
-        else:
-            previous = await channel.fetch_message(id)
-            await previous.edit(embed = embedVar)
-
-    except HTTPError as http_err:
-        print(f'HTTP error occurred: {http_err}')
+    except aiohttp.ClientResponseError as http_err:
+        print(f"HTTP error occurred: {http_err}")
     except Exception as err:
-        print(f'Other error occurred: {err}')
+        print(f"Other error occurred: {err}")
 
-    time.sleep(60)
 
 @client.event
 async def on_ready():
-    print("Logged in as {0.user}".format(client))
-    while True:
-        await checkStatus()
+    print(f"Logged in as {client.user}")
+    check_status.start()
 
-client.run(token)
+if token and channel:
+    client.run(token)
+else:
+    print('Missing "token" and "channel" values in config.json')
+    quit()
