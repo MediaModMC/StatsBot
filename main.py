@@ -5,16 +5,20 @@ import json
 
 client = discord.Client()
 token = ""
-channel = 0
+channel_id = 0
 
-with open("config.json") as file:
-    data = json.load(file)
-    token = data["token"]
-    channel = int(data["channel"])
+try:
+    with open("config.json") as f:
+        data = json.load(f)
+        token = data["token"]
+        channel_id = int(data["channel"])
+except (FileNotFoundError, KeyError):
+    print("Make sure you've created config.json and entered the correct information in it (see readme for more info)")
+    quit()
 
 
 @tasks.loop(minutes=1)
-async def check_status():
+async def check_status(channel):
     print("Checking MediaMod status...")
     if not hasattr(client, "session") or client.session.closed:
         client.session = aiohttp.ClientSession(raise_for_status=True)
@@ -37,10 +41,15 @@ async def check_status():
             inline=False
         )
 
-        if not client.message:
-            client.message = await client.get_channel(channel).send(embed=embed)
-        else:
-            await client.message.edit(embed=embed)
+        try:
+            if not client.message.embeds:
+                client.message = await client.message.edit(content=None, embed=embed)
+            else:
+                previous = client.message.embeds[0]
+                if previous.to_dict() != embed.to_dict():
+                    await client.message.edit(embed=embed)
+        except (discord.NotFound, AttributeError):
+            client.message = await channel.send(embed=embed)
         print("Done!")
 
     except aiohttp.ClientResponseError as http_err:
@@ -52,9 +61,17 @@ async def check_status():
 @client.event
 async def on_ready():
     print(f"Logged in as {client.user}")
-    check_status.start()
+    channel = client.get_channel(channel_id)
+    client.message = None
+    async for m in channel.history(limit=5):
+        if m.author.id == client.user.id and m.embeds:
+            client.message = m
+            break
+    if not client.message:
+        client.message = await channel.send('Loading stats...')
+    check_status.start(channel)
 
-if token and channel:
+if token and channel_id:
     client.run(token)
 else:
     print('Missing "token" and "channel" values in config.json')
