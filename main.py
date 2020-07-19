@@ -34,7 +34,7 @@ async def check_status(channel):
             color=0x00ff00
         ).add_field(
             name="Stable Users",
-            value="**Online Users**: " + str(json["allOnlineUsers"]) + "\n**All Users**: " + str(json["allUsers"] + "\n*Note: online users is broken in v1.2.4, this is fixed in the betas of v2*"),
+            value="**Online Users**: " + str(json["allOnlineUsers"]) + "\n**All Users**: " + str(json["allUsers"])  + "\n*Note: online users is broken in v1.2.4, this is fixed in the betas of v2*",
             inline=False
         ).add_field(
             name="Beta Users",
