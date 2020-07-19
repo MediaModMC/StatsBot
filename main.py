@@ -26,18 +26,19 @@ async def check_status(channel):
         client.message = None
     try:
         json = await (await client.session.get("https://mediamodapi.cbyrne.dev/stats")).json()
+        betaJson = await (await client.session.get("https://mediamodapi.conorthedev.me/stats")).json()
 
         embed = discord.Embed(
             title="MediaMod Stats",
             description="How many people are using MediaMod? (Note: this is only people with snooper enabled)",
             color=0x00ff00
         ).add_field(
-            name="Online Users",
-            value=json["allOnlineUsers"],
+            name="Stable Users",
+            value="**Online Users**: " + str(json["allOnlineUsers"]) + "\n**All Users**: " + str(json["allUsers"]),
             inline=False
         ).add_field(
-            name="All Users",
-            value=json["allUsers"],
+            name="Beta Users",
+            value="**Online Users**: " + str(betaJson["allOnlineUsers"]) + "\n**All Users**: " + str(betaJson["allUsers"]),
             inline=False
         )
 
